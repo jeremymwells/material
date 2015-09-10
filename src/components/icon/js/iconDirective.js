@@ -161,25 +161,19 @@ angular
  * </hljs>
  *
  */
-function mdIconDirective($mdIcon, $mdTheming, $mdAria ) {
+function mdIconDirective($mdIcon, $mdTheming, $mdAria) {
 
   return {
-    scope: {
-      fontSet : '@mdFontSet',
-      fontIcon: '@mdFontIcon',
-      svgIcon : '@mdSvgIcon',
-      svgSrc  : '@mdSvgSrc'
-    },
     restrict: 'E',
-    link : postLink
+    link : linkFunc
   };
 
-
   /**
-   * Directive postLink
+   * Directive link function
    * Supports embedded SVGs, font-icons, & external SVGs
    */
-  function postLink(scope, element, attr) {
+  function linkFunc(scope, element, attr) {
+    var oldSrc;
     $mdTheming(element);
 
     prepareForFontIcon();
@@ -206,19 +200,59 @@ function mdIconDirective($mdIcon, $mdTheming, $mdAria ) {
     }
 
     if (attrName) {
-      // Use either pre-configured SVG or URL source, respectively.
-      attr.$observe(attrName, function(attrVal) {
-
-        element.empty();
-        if (attrVal) {
-          $mdIcon(attrVal).then(function(svg) {
-            element.append(svg);
-          });
-        }
-
-      });
+      prepareAndSetWatch(attr[attrName]);
+      prepareAndSetObserver(attrName);
     }
-
+    
+    function prepareAndSetWatch(objValStr){
+      var iconSrc = tryToEval(objValStr);
+      if (angular.isObject(iconSrc)){
+        scope.$watch(objValStr, ngIconSrcObserveAction, true);
+      }
+    }
+    
+    function prepareAndSetObserver(name){
+      attr.$observe(name, ngIconSrcObserveAction);
+    }
+    
+    function updateSrc(newSrc){      
+      if (newSrc !== oldSrc){                
+        $mdIcon(newSrc).then(function(svg) {
+          element.empty();
+          element.append(svg);
+          oldSrc = newSrc;
+        });
+      }
+    }        
+    
+    function tryToEval(attrVal){
+      var returnVal;
+      try{
+        returnVal = scope.$eval(attrVal) || attrVal;
+      }catch(z){        
+        returnVal = attrVal;
+      }finally{        
+        return returnVal;
+      }
+    }
+    
+    function ngIconSrcObserveAction(newVal){
+      var newSrc = getSrc(newVal);
+      updateSrc(newSrc);
+    }
+    
+    function getSrc(srcVal){
+      var result = tryToEval(srcVal);       
+      if (angular.isObject(result)) {
+        angular.forEach(result, function(expression, src) {
+          if (expression) {
+            result = src;
+          }
+        });               
+      }
+      return result;
+    }
+    
     function parentsHaveText() {
       var parent = element.parent();
       if (parent.attr('aria-label') || parent.text()) {

@@ -203,7 +203,7 @@ describe('mdIcon directive', function() {
 
     describe('using md-svg-icon=""', function() {
 
-      it('should update mdSvgIcon when attribute value changes', function() {
+      it('should update mdSvgIcon when attribute value of type string changes', function() {
         $scope.iconName = 'android';
         el = make('<md-icon md-svg-icon="{{ iconName }}"></md-icon>');
         var iScope = el.isolateScope();
@@ -218,7 +218,29 @@ describe('mdIcon directive', function() {
         el = make('<md-icon md-svg-icon="image:android"></md-icon>');
         expect(el.html()).toEqual('');
       });
+      
+      it('should update mdSvgIcon when attribute value of type object\'s bound model property changes', function() {
+        $scope.androidIcon = true;
+        el = make('<md-icon md-svg-icon="{ \'android\': androidIcon, \'cake\': !androidIcon }"></md-icon>');
+        var iScope = el.isolateScope();
+        expect(iScope.svgIcon).toEqual('android');
+        $scope.androidIcon = false;
+        $scope.$digest();
+        expect(iScope.svgIcon).toEqual('cake');
+      });
 
+      it('should update mdSvgIcon when attribute value of type object\'s expression evaluation changes', function() {
+        var expressionResult = true;
+        $scope.srcEvaluationExpression = function(){
+          return expressionResult;
+        }
+        el = make('<md-icon md-svg-icon="{ \'android\': srcEvaluationExpression(), \'cake\': !srcEvaluationExpression() }"></md-icon>');
+        var iScope = el.isolateScope();
+        expect(iScope.svgIcon).toEqual('android');
+        expressionResult = false;
+        $scope.$digest();
+        expect(iScope.svgIcon).toEqual('cake');
+      });
 
     });
 
